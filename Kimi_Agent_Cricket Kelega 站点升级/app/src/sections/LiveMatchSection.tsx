@@ -1,9 +1,54 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Radio } from 'lucide-react';
+
+interface Match {
+  id: number;
+  team1: string;
+  team2: string;
+  score1: string;
+  score2: string;
+  overs: string;
+  status: 'live' | 'upcoming' | 'completed';
+  venue: string;
+}
 
 export default function LiveMatchSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [match, setMatch] = useState<Match | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLiveMatch();
+  }, []);
+
+  const fetchLiveMatch = async () => {
+    try {
+      const response = await fetch('https://cricket-mcp-server-main-production.up.railway.app/live');
+      const data = await response.json();
+
+      // Transform and find the best match to show (Live > Recent)
+      const matches = data.map((m: any) => ({
+        id: m.id,
+        team1: m.teams[0],
+        team2: m.teams[1],
+        score1: m.score?.[0]?.r ? `${m.score[0].r}/${m.score[0].w}` : '0/0',
+        score2: m.score?.[1]?.r ? `${m.score[1].r}/${m.score[1].w}` : '0/0',
+        overs: m.score?.[0]?.o || m.score?.[1]?.o || '0.0',
+        status: m.status.toLowerCase().includes('live') ? 'live' : 'completed',
+        venue: m.venue
+      }));
+
+      const liveMatch = matches.find((m: any) => m.status === 'live');
+      const recentMatch = matches[0]; // Fallback to first available if no live match
+
+      setMatch(liveMatch || recentMatch || null);
+    } catch (error) {
+      console.error('Failed to fetch live match:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -71,7 +116,9 @@ export default function LiveMatchSection() {
       }, 100);
       setTimeout(() => clearInterval(interval), 5000);
     }
-  }, []);
+  }, [loading]); // Re-run animation setup when loading finishes/match renders
+
+  if (!match && !loading) return null;
 
   return (
     <section
@@ -103,64 +150,73 @@ export default function LiveMatchSection() {
         ref={cardRef}
         className="relative z-10 ml-[6vw] w-[88vw] sm:w-[60vw] lg:w-[44vw] min-h-[64vh] glass rounded-lg p-6 sm:p-8 lg:p-10 flex flex-col justify-center"
       >
-        {/* Micro Label */}
-        <div className="flex items-center gap-2 mb-6">
-          <span className="w-2 h-2 rounded-full bg-coral live-dot" />
-          <span className="text-xs font-mono tracking-[0.18em] text-white/70 uppercase">
-            Live Match
-          </span>
-        </div>
+        {match ? (
+          <>
+            {/* Micro Label */}
+            <div className="flex items-center gap-2 mb-6">
+              <span className={`w-2 h-2 rounded-full ${match.status === 'live' ? 'bg-coral live-dot' : 'bg-white/50'}`} />
+              <span className="text-xs font-mono tracking-[0.18em] text-white/70 uppercase">
+                {match.status === 'live' ? 'Live Match' : 'Recent Match'}
+              </span>
+            </div>
 
-        {/* Headlines */}
-        <div className="space-y-1 mb-8">
-          <h2
-            className="headline-line font-display font-bold text-white leading-none"
-            style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
-          >
-            INDIA
-          </h2>
-          <h2
-            className="headline-line font-display font-bold text-coral leading-none"
-            style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
-          >
-            VS
-          </h2>
-          <h2
-            className="headline-line font-display font-bold text-white leading-none"
-            style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
-          >
-            AUSTRALIA
-          </h2>
-        </div>
+            {/* Headlines */}
+            <div className="space-y-1 mb-8">
+              <h2
+                className="headline-line font-display font-bold text-white leading-none uppercase"
+                style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
+              >
+                {match.team1}
+              </h2>
+              <h2
+                className="headline-line font-display font-bold text-coral leading-none"
+                style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
+              >
+                VS
+              </h2>
+              <h2
+                className="headline-line font-display font-bold text-white leading-none uppercase"
+                style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
+              >
+                {match.team2}
+              </h2>
+            </div>
 
-        {/* Content */}
-        <p className="card-content text-white/70 text-base lg:text-lg leading-relaxed mb-8 max-w-md">
-          A high-stakes clash at the top of the table. Follow ball-by-ball updates,
-          key moments, and post-match analysis.
-        </p>
+            {/* Content */}
+            <p className="card-content text-white/70 text-base lg:text-lg leading-relaxed mb-8 max-w-md">
+              {match.status === 'live'
+                ? `Catch the live action from ${match.venue}. ${match.team1} takes on ${match.team2} in this thrilling encounter.`
+                : `Match completed at ${match.venue}. Check out the final score and highlights.`}
+            </p>
 
-        {/* Score */}
-        <div className="card-content flex items-center gap-6 mb-8 p-4 bg-white/5 rounded-lg">
-          <div className="text-center">
-            <div className="font-display font-bold text-2xl lg:text-3xl text-white">IND</div>
-            <div className="font-mono text-coral text-lg">287/4</div>
+            {/* Score */}
+            <div className="card-content flex items-center gap-6 mb-8 p-4 bg-white/5 rounded-lg">
+              <div className="text-center">
+                <div className="font-display font-bold text-2xl lg:text-3xl text-white">{match.team1.slice(0, 3).toUpperCase()}</div>
+                <div className={`font-mono text-lg ${match.status === 'live' ? 'text-coral' : 'text-white'}`}>{match.score1}</div>
+              </div>
+              <div className="text-white/50 font-mono text-sm">vs</div>
+              <div className="text-center">
+                <div className="font-display font-bold text-2xl lg:text-3xl text-white">{match.team2.slice(0, 3).toUpperCase()}</div>
+                <div className="font-mono text-white/60 text-lg">{match.score2}</div>
+              </div>
+              <div className="ml-auto text-right">
+                <div className="text-xs text-white/50 font-mono">OVERS</div>
+                <div className="font-mono text-white">{match.overs}</div>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <button className="card-content btn-primary w-fit flex items-center gap-2">
+              <Radio className="w-4 h-4" />
+              {match.status === 'live' ? 'Follow Live' : 'View Summary'}
+            </button>
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-8 h-8 border-2 border-coral border-t-transparent rounded-full animate-spin" />
           </div>
-          <div className="text-white/50 font-mono text-sm">vs</div>
-          <div className="text-center">
-            <div className="font-display font-bold text-2xl lg:text-3xl text-white">AUS</div>
-            <div className="font-mono text-white/60 text-lg">245/6</div>
-          </div>
-          <div className="ml-auto text-right">
-            <div className="text-xs text-white/50 font-mono">OVERS</div>
-            <div className="font-mono text-white">42.3</div>
-          </div>
-        </div>
-
-        {/* CTA */}
-        <button className="card-content btn-primary w-fit flex items-center gap-2">
-          <Radio className="w-4 h-4" />
-          Follow Live
-        </button>
+        )}
       </div>
     </section>
   );

@@ -1,9 +1,52 @@
-import { useEffect, useRef } from 'react';
-import { Eye } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Eye, Calendar, MapPin } from 'lucide-react';
+
+interface Fixture {
+  id: number;
+  date: string;
+  time: string;
+  team1: string;
+  team2: string;
+  venue: string;
+  matchType: string;
+  series: string;
+}
 
 export default function FeaturedMatchSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [match, setMatch] = useState<Fixture | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchFeaturedMatch();
+  }, []);
+
+  const fetchFeaturedMatch = async () => {
+    try {
+      const response = await fetch('https://cricket-mcp-server-main-production.up.railway.app/schedule');
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const item = data[0]; // Get the first upcoming match
+        const fixture: Fixture = {
+          id: 0,
+          date: item.date || 'TBA',
+          time: 'TBA',
+          team1: item.teams?.[0] || 'Team A',
+          team2: item.teams?.[1] || 'Team B',
+          venue: item.venue || 'TBA',
+          matchType: 'ODI',
+          series: item.name
+        };
+        setMatch(fixture);
+      }
+    } catch (error) {
+      console.error('Failed to fetch featured match:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -68,7 +111,9 @@ export default function FeaturedMatchSection() {
       }, 100);
       setTimeout(() => clearInterval(interval), 5000);
     }
-  }, []);
+  }, [loading]);
+
+  if (!match && !loading) return null;
 
   return (
     <section
@@ -99,59 +144,70 @@ export default function FeaturedMatchSection() {
         ref={cardRef}
         className="relative z-10 mr-[6vw] w-[88vw] sm:w-[60vw] lg:w-[44vw] min-h-[64vh] glass rounded-lg p-6 sm:p-8 lg:p-10 flex flex-col justify-center"
       >
-        {/* Micro Label */}
-        <div className="flex items-center gap-2 mb-6">
-          <span className="text-xs font-mono tracking-[0.18em] text-white/70 uppercase">
-            Featured Match
-          </span>
-        </div>
+        {match ? (
+          <>
+            {/* Micro Label */}
+            <div className="flex items-center gap-2 mb-6">
+              <span className="text-xs font-mono tracking-[0.18em] text-white/70 uppercase">
+                Featured Match
+              </span>
+            </div>
 
-        {/* Headlines */}
-        <div className="space-y-1 mb-8">
-          <h2
-            className="headline-line font-display font-bold text-white leading-none"
-            style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
-          >
-            PAKISTAN
-          </h2>
-          <h2
-            className="headline-line font-display font-bold text-coral leading-none"
-            style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
-          >
-            VS
-          </h2>
-          <h2
-            className="headline-line font-display font-bold text-white leading-none"
-            style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
-          >
-            ENGLAND
-          </h2>
-        </div>
+            {/* Headlines */}
+            <div className="space-y-1 mb-8">
+              <h2
+                className="headline-line font-display font-bold text-white leading-none uppercase"
+                style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
+              >
+                {match.team1}
+              </h2>
+              <h2
+                className="headline-line font-display font-bold text-coral leading-none"
+                style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
+              >
+                VS
+              </h2>
+              <h2
+                className="headline-line font-display font-bold text-white leading-none uppercase"
+                style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
+              >
+                {match.team2}
+              </h2>
+            </div>
 
-        {/* Content */}
-        <p className="card-content text-white/70 text-base lg:text-lg leading-relaxed mb-8 max-w-md">
-          Rivalry renewed. Expect pace, spin, and late-innings drama as two
-          heavyweights battle for momentum.
-        </p>
+            {/* Content */}
+            <p className="card-content text-white/70 text-base lg:text-lg leading-relaxed mb-8 max-w-md">
+              {match.series}. Catch the upcoming action between these two cricketing giants.
+            </p>
 
-        {/* Match Info */}
-        <div className="card-content flex items-center gap-4 mb-8 p-4 bg-white/5 rounded-lg">
-          <div className="flex-1">
-            <div className="text-xs text-white/50 font-mono mb-1">DATE</div>
-            <div className="text-white font-medium">Tomorrow, 2:00 PM</div>
+            {/* Match Info */}
+            <div className="card-content flex items-center gap-4 mb-8 p-4 bg-white/5 rounded-lg">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 text-xs text-white/50 font-mono mb-1">
+                  <Calendar className="w-3 h-3" /> DATE
+                </div>
+                <div className="text-white font-medium">{match.date}</div>
+              </div>
+              <div className="w-px h-10 bg-white/10" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 text-xs text-white/50 font-mono mb-1">
+                  <MapPin className="w-3 h-3" /> VENUE
+                </div>
+                <div className="text-white font-medium">{match.venue}</div>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <button className="card-content btn-primary w-fit flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Match Preview
+            </button>
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-8 h-8 border-2 border-coral border-t-transparent rounded-full animate-spin" />
           </div>
-          <div className="w-px h-10 bg-white/10" />
-          <div className="flex-1">
-            <div className="text-xs text-white/50 font-mono mb-1">VENUE</div>
-            <div className="text-white font-medium">Lord&apos;s, London</div>
-          </div>
-        </div>
-
-        {/* CTA */}
-        <button className="card-content btn-primary w-fit flex items-center gap-2">
-          <Eye className="w-4 h-4" />
-          Match Preview
-        </button>
+        )}
       </div>
     </section>
   );
