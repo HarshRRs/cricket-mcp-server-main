@@ -1,0 +1,281 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 216 65% 14%;
+    --foreground: 0 0% 100%;
+    --card: 216 65% 14%;
+    --card-foreground: 0 0% 100%;
+    --popover: 216 65% 14%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 16 100% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 216 45% 20%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 216 30% 25%;
+    --muted-foreground: 214 20% 72%;
+    --accent: 16 100% 56%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 216 30% 25%;
+    --input: 216 30% 25%;
+    --ring: 16 100% 56%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-[#0B1D3A] text-white antialiased;
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Typography */
+.font-display {
+  font-family: 'Oswald', sans-serif;
+}
+
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Custom Colors */
+.bg-navy {
+  background-color: #0B1D3A;
+}
+
+.bg-navy-dark {
+  background-color: #08152B;
+}
+
+.bg-navy-light {
+  background-color: #122a4a;
+}
+
+.text-coral {
+  color: #FF4D2E;
+}
+
+.bg-coral {
+  background-color: #FF4D2E;
+}
+
+.border-coral {
+  border-color: #FF4D2E;
+}
+
+/* Grain Overlay - Optimized */
+.grain-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Glassmorphism - Optimized for mobile */
+.glass {
+  background: rgba(11, 29, 58, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Live Pulse Animation */
+@keyframes live-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+.live-dot {
+  animation: live-pulse 1.5s ease-in-out infinite;
+}
+
+/* Button Styles */
+.btn-primary {
+  @apply bg-coral text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium transition-all duration-300;
+}
+
+.btn-primary:hover {
+  @apply scale-105;
+  box-shadow: 0 8px 30px rgba(255, 77, 46, 0.4);
+}
+
+.btn-primary:active {
+  @apply scale-95;
+}
+
+.btn-outline {
+  @apply border-2 border-white/30 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium transition-all duration-300;
+}
+
+.btn-outline:hover {
+  @apply border-coral bg-coral/10;
+}
+
+/* Section Base */
+.section-pinned {
+  @apply w-screen overflow-hidden relative;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
+}
+
+/* Editorial Card */
+.editorial-card {
+  @apply glass p-4 sm:p-6 lg:p-8;
+}
+
+/* Stats Table */
+.stats-table {
+  @apply w-full;
+}
+
+.stats-table th {
+  @apply text-left py-2 sm:py-3 px-2 sm:px-4 text-xs font-mono text-[#A9B6C8] uppercase tracking-wider;
+}
+
+.stats-table td {
+  @apply py-3 sm:py-4 px-2 sm:px-4 border-t border-white/10;
+}
+
+/* Scrollbar - Optimized */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0B1D3A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1a3a5c;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF4D2E;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 640px) {
+  .section-pinned {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  
+  .glass {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  
+  .grain-overlay {
+    opacity: 0.02;
+  }
+}
+
+/* Touch device optimizations */
+@media (pointer: coarse) {
+  .btn-primary:hover,
+  .btn-outline:hover {
+    transform: none;
+  }
+  
+  .btn-primary:active,
+  .btn-outline:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .live-dot {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Line clamp utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Image optimization */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Prevent text selection on interactive elements */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Focus styles */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid #FF4D2E;
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .grain-overlay,
+  nav,
+  .btn-primary,
+  .btn-outline {
+    display: none !important;
+  }
+}
