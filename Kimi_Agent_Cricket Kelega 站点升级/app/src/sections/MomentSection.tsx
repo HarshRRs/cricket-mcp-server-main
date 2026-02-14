@@ -126,19 +126,19 @@ export default function MomentSection() {
             className="headline-line font-display font-bold text-white leading-none"
             style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
           >
-            CATCH
+            EPIC
           </h2>
           <h2
             className="headline-line font-display font-bold text-white leading-none"
             style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
           >
-            OF THE
+            MATCH
           </h2>
           <h2
             className="headline-line font-display font-bold text-coral leading-none"
             style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
           >
-            MATCH
+            MOMENTS
           </h2>
         </div>
 
@@ -166,9 +166,11 @@ export default function MomentSection() {
         </div>
 
         {/* CTA */}
-        <button className="card-content btn-primary w-fit flex items-center gap-2">
+        <button
+          onClick={() => window.open(`https://www.youtube.com/results?search_query=cricket+highlights+${new Date().toLocaleString('default', { month: 'long' })}+${new Date().getFullYear()}`, '_blank')}
+          className="card-content btn-primary w-fit flex items-center gap-2">
           <Play className="w-4 h-4" fill="currentColor" />
-          Watch Replay
+          Watch Replays
         </button>
       </div>
     </section>

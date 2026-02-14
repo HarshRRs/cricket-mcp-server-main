@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Play, Calendar } from 'lucide-react';
 
 export default function HeroSection() {
@@ -7,8 +7,12 @@ export default function HeroSection() {
   const subheadRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
   const bgRef = useRef<HTMLDivElement>(null);
+  const [matchInfo, setMatchInfo] = useState<string>('Live scores, highlights, and fixtures—built for fans who breathe cricket.');
+  const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
+    fetchMatchInfo();
+
     // Auto-play entrance animation on load
     // Background entrance
     if (bgRef.current) {
@@ -64,6 +68,33 @@ export default function HeroSection() {
     }
   }, []);
 
+  const fetchMatchInfo = async () => {
+    try {
+      // Try live matches first
+      const liveResponse = await fetch('https://cricket-mcp-server-main-production.up.railway.app/live');
+      const liveData = await liveResponse.json();
+
+      if (liveData && liveData.length > 0) {
+        setMatchInfo(`LIVE: ${liveData[0].match}`);
+        setIsLive(true);
+        return;
+      }
+
+      // Fallback to schedule
+      const scheduleResponse = await fetch('https://cricket-mcp-server-main-production.up.railway.app/schedule');
+      const scheduleData = await scheduleResponse.json();
+
+      if (scheduleData && scheduleData.length > 0) {
+        const next = scheduleData[0];
+        const team1 = next.teams?.[0] || 'TBA';
+        const team2 = next.teams?.[1] || 'TBA';
+        setMatchInfo(`UPCOMING: ${team1} vs ${team2} • ${next.date || 'Soon'}`);
+      }
+    } catch (error) {
+      console.error('Failed to fetch match info:', error);
+    }
+  };
+
   return (
     <section
       ref={sectionRef}
@@ -95,8 +126,8 @@ export default function HeroSection() {
         {/* Micro Label */}
         <div className="mb-6">
           <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm text-sm font-mono tracking-widest text-white/85">
-            <span className="w-2 h-2 rounded-full bg-coral live-dot" />
-            LIVE MATCH CENTER
+            <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-coral animate-pulse' : 'bg-white/50'}`} />
+            {isLive ? 'LIVE MATCH CENTER' : 'CRICKET HUB'}
           </span>
         </div>
 
@@ -113,9 +144,9 @@ export default function HeroSection() {
         {/* Subheadline */}
         <p
           ref={subheadRef}
-          className="text-lg sm:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed"
+          className="text-lg sm:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed font-medium"
         >
-          Live scores, highlights, and fixtures—built for fans who breathe cricket.
+          {matchInfo}
         </p>
 
         {/* CTA Buttons */}

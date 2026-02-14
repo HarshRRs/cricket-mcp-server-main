@@ -1,11 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Play, Calendar } from 'lucide-react';
 
 export default function WinningSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [latestResult, setLatestResult] = useState<{ match: string; status: string } | null>(null);
 
   useEffect(() => {
+    fetchResult();
+
     const section = sectionRef.current;
     const content = contentRef.current;
     if (!section || !content) return;
@@ -69,6 +72,27 @@ export default function WinningSection() {
     }
   }, []);
 
+  const fetchResult = async () => {
+    try {
+      const response = await fetch('https://cricket-mcp-server-main-production.up.railway.app/live');
+      const data = await response.json();
+
+      // Find a match that is completed (status contains "won" or "lost" or "tied")
+      const completedMatch = data.find((m: any) =>
+        m.status && (m.status.toLowerCase().includes('won') || m.status.toLowerCase().includes('drawn') || m.status.toLowerCase().includes('tied'))
+      );
+
+      if (completedMatch) {
+        setLatestResult({
+          match: completedMatch.match || `${completedMatch.teams[0]} vs ${completedMatch.teams[1]}`,
+          status: completedMatch.status
+        });
+      }
+    } catch (e) {
+      console.error("Failed to fetch results", e);
+    }
+  };
+
   return (
     <section
       ref={sectionRef}
@@ -116,8 +140,14 @@ export default function WinningSection() {
 
         {/* Subheadline */}
         <p className="other-content text-lg sm:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-          From the final wicket to the trophy lift—experience every emotion as it
-          happens.
+          {latestResult ? (
+            <>
+              <span className="block font-bold text-white mb-2">{latestResult.match}</span>
+              {latestResult.status}
+            </>
+          ) : (
+            "From the final wicket to the trophy lift—experience every emotion as it happens."
+          )}
         </p>
 
         {/* CTA Buttons */}

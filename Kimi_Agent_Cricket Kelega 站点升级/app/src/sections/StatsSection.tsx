@@ -1,39 +1,65 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TrendingUp, Calendar, Download, ChevronRight } from 'lucide-react';
 
-const topRunScorers = [
-  { rank: 1, player: 'Virat Kohli', team: 'IND', runs: 847, sr: 98.5 },
-  { rank: 2, player: 'Rohit Sharma', team: 'IND', runs: 712, sr: 105.2 },
-  { rank: 3, player: 'Steve Smith', team: 'AUS', runs: 698, sr: 89.4 },
-  { rank: 4, player: 'Babar Azam', team: 'PAK', runs: 654, sr: 92.1 },
-  { rank: 5, player: 'Joe Root', team: 'ENG', runs: 621, sr: 87.8 },
-];
+interface RankingPlayer {
+  rank: number;
+  player: string;
+  team: string;
+  rating: string;
+}
 
-const upcomingFixtures = [
-  {
-    teams: 'South Africa vs New Zealand',
-    date: 'Today, 2:00 PM',
-    venue: 'Centurion',
-  },
-  {
-    teams: 'Sri Lanka vs Bangladesh',
-    date: 'Tomorrow, 10:00 AM',
-    venue: 'Colombo',
-  },
-  {
-    teams: 'West Indies vs Ireland',
-    date: 'Sat, 6:00 PM',
-    venue: 'Bridgetown',
-  },
-  {
-    teams: 'Afghanistan vs Zimbabwe',
-    date: 'Sun, 3:00 PM',
-    venue: 'Sharjah',
-  },
-];
+interface Fixture {
+  teams: string;
+  date: string;
+  venue: string;
+}
 
 export default function StatsSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const [topPlayers, setTopPlayers] = useState<RankingPlayer[]>([]);
+  const [upcomingFixtures, setUpcomingFixtures] = useState<Fixture[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      // Fetch Rankings
+      const rankingsResponse = await fetch('https://cricket-mcp-server-main-production.up.railway.app/rankings');
+      const rankingsData = await rankingsResponse.json();
+
+      const batsmen = rankingsData.find((curr: any) => curr.type === 'ICC Batting Rankings' && curr.format === 'ODI');
+      if (batsmen && batsmen.rank) {
+        setTopPlayers(batsmen.rank.slice(0, 5).map((p: any) => ({
+          rank: parseInt(p.rank),
+          player: p.player,
+          team: '', // Country not consistent in this specific response from server, usually player name helps or is part of it. 
+          // Actually previous StatsPage mapping used `player.player` which might contain team? 
+          // Let's assume just player name for now or try to extract if format implies.
+          rating: p.rating
+        })));
+      }
+
+      // Fetch Schedule
+      const scheduleResponse = await fetch('https://cricket-mcp-server-main-production.up.railway.app/schedule');
+      const scheduleData = await scheduleResponse.json();
+
+      if (scheduleData && scheduleData.length > 0) {
+        setUpcomingFixtures(scheduleData.slice(0, 4).map((m: any) => ({
+          teams: m.name || `${m.teams?.[0]} vs ${m.teams?.[1]}`,
+          date: m.date || 'Upcoming',
+          venue: m.venue || 'TBA'
+        })));
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch stats/fixtures:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -109,7 +135,7 @@ export default function StatsSection() {
       }, 100);
       setTimeout(() => clearInterval(interval), 5000);
     }
-  }, []);
+  }, [loading]);
 
   return (
     <section
@@ -136,7 +162,7 @@ export default function StatsSection() {
             <div className="flex items-center gap-3 mb-6">
               <TrendingUp className="w-5 h-5 text-coral" />
               <h3 className="font-display font-semibold text-xl text-navy">
-                TOP RUN SCORERS
+                TOP ODI BATSMEN
               </h3>
             </div>
 
@@ -151,26 +177,22 @@ export default function StatsSection() {
                       Player
                     </th>
                     <th className="py-3 px-4 text-right text-xs font-mono text-navy/60 uppercase tracking-wider">
-                      Runs
-                    </th>
-                    <th className="py-3 px-4 text-right text-xs font-mono text-navy/60 uppercase tracking-wider">
-                      SR
+                      Rating
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {topRunScorers.map((player) => (
+                  {topPlayers.length > 0 ? topPlayers.map((player) => (
                     <tr
                       key={player.rank}
                       className="border-t border-gray-100 hover:bg-navy/5 transition-colors"
                     >
                       <td className="py-4 px-4">
                         <span
-                          className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                            player.rank === 1
+                          className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${player.rank === 1
                               ? 'bg-coral text-white'
                               : 'bg-navy/10 text-navy'
-                          }`}
+                            }`}
                         >
                           {player.rank}
                         </span>
@@ -180,19 +202,15 @@ export default function StatsSection() {
                           <span className="font-semibold text-navy">
                             {player.player}
                           </span>
-                          <span className="text-xs font-mono text-navy/50 px-2 py-0.5 bg-navy/5 rounded">
-                            {player.team}
-                          </span>
                         </div>
                       </td>
                       <td className="py-4 px-4 text-right font-mono font-semibold text-navy">
-                        {player.runs}
-                      </td>
-                      <td className="py-4 px-4 text-right font-mono text-navy/70">
-                        {player.sr}
+                        {player.rating}
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr><td colSpan={3} className="py-8 text-center text-navy/50">Loading stats...</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -208,7 +226,7 @@ export default function StatsSection() {
             </div>
 
             <div className="space-y-4">
-              {upcomingFixtures.map((fixture, index) => (
+              {upcomingFixtures.length > 0 ? upcomingFixtures.map((fixture, index) => (
                 <div
                   key={index}
                   className="fixture-card bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-shadow cursor-pointer group"
@@ -227,7 +245,9 @@ export default function StatsSection() {
                     <ChevronRight className="w-5 h-5 text-navy/30 group-hover:text-coral group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-navy/50">Loading fixtures...</div>
+              )}
             </div>
           </div>
         </div>

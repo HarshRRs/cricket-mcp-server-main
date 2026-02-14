@@ -1,9 +1,39 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { User } from 'lucide-react';
+
+interface PlayerProfile {
+  name: string;
+  rank: number;
+  rating: string;
+}
 
 export default function PlayerSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [player, setPlayer] = useState<PlayerProfile | null>(null);
+
+  useEffect(() => {
+    fetchTopPlayer();
+  }, []);
+
+  const fetchTopPlayer = async () => {
+    try {
+      const response = await fetch('https://cricket-mcp-server-main-production.up.railway.app/rankings');
+      const data = await response.json();
+
+      const batsmen = data.find((curr: any) => curr.type === 'ICC Batting Rankings' && curr.format === 'ODI');
+      if (batsmen && batsmen.rank && batsmen.rank.length > 0) {
+        const top = batsmen.rank[0];
+        setPlayer({
+          name: top.player,
+          rank: 1,
+          rating: top.rating
+        });
+      }
+    } catch (e) {
+      console.error('Failed to fetch player', e);
+    }
+  };
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -68,7 +98,14 @@ export default function PlayerSection() {
       }, 100);
       setTimeout(() => clearInterval(interval), 5000);
     }
-  }, []);
+  }, [player]);
+
+  if (!player) return null; // Or skeleton
+
+  // Split name for display
+  const nameParts = player.name.split(' ');
+  const firstName = nameParts[0];
+  const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
 
   return (
     <section
@@ -102,49 +139,45 @@ export default function PlayerSection() {
         {/* Micro Label */}
         <div className="flex items-center gap-2 mb-6">
           <span className="text-xs font-mono tracking-[0.18em] text-white/70 uppercase">
-            Player of the Match
+            ICC #1 Batsman (ODI)
           </span>
         </div>
 
         {/* Headlines */}
         <div className="space-y-1 mb-8">
           <h2
-            className="headline-line font-display font-bold text-white leading-none"
+            className="headline-line font-display font-bold text-white leading-none uppercase"
             style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
           >
-            VIRAT
+            {firstName}
           </h2>
-          <h2
-            className="headline-line font-display font-bold text-coral leading-none"
-            style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
-          >
-            KOHLI
-          </h2>
+          {lastName && (
+            <h2
+              className="headline-line font-display font-bold text-coral leading-none uppercase"
+              style={{ fontSize: 'clamp(36px, 5vw, 72px)' }}
+            >
+              {lastName}
+            </h2>
+          )}
         </div>
 
         {/* Content */}
         <p className="card-content text-white/70 text-base lg:text-lg leading-relaxed mb-8 max-w-md">
-          A masterclass in chasing—composed, clinical, and relentless under pressure.
+          Currently topping the global charts. A force to be reckoned with.
         </p>
 
         {/* Stats */}
-        <div className="card-content grid grid-cols-3 gap-4 mb-8">
+        <div className="card-content grid grid-cols-2 gap-4 mb-8">
           <div className="stat-item text-center p-4 bg-white/5 rounded-lg">
-            <div className="text-xs text-white/50 font-mono mb-1">RUNS</div>
+            <div className="text-xs text-white/50 font-mono mb-1">RANK</div>
             <div className="font-display font-bold text-2xl lg:text-3xl text-white">
-              112<span className="text-coral text-lg">*</span>
+              #{player.rank}
             </div>
           </div>
           <div className="stat-item text-center p-4 bg-white/5 rounded-lg">
-            <div className="text-xs text-white/50 font-mono mb-1">BALLS</div>
-            <div className="font-display font-bold text-2xl lg:text-3xl text-white">
-              98
-            </div>
-          </div>
-          <div className="stat-item text-center p-4 bg-white/5 rounded-lg">
-            <div className="text-xs text-white/50 font-mono mb-1">4s/6s</div>
+            <div className="text-xs text-white/50 font-mono mb-1">RATING</div>
             <div className="font-display font-bold text-2xl lg:text-3xl text-coral">
-              9/3
+              {player.rating}
             </div>
           </div>
         </div>
@@ -152,7 +185,7 @@ export default function PlayerSection() {
         {/* CTA */}
         <button className="card-content btn-primary w-fit flex items-center gap-2">
           <User className="w-4 h-4" />
-          View Profile
+          View Rankings
         </button>
       </div>
     </section>
