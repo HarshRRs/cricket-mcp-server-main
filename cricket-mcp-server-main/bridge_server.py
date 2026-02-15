@@ -136,11 +136,37 @@ def get_live():
             official_data = []
 
     # 2. Fetch Scraper Data (for missing matches like Ind vs Pak)
-    scraped_data = cache.get("scraped_live", LIVE_TTL) # Use same TTL
-    if not scraped_data:
+    scraped_data = cache.get("scraped_live", LIVE_TTL)    # 2. Fetch Premium Live Data (Scraper)
+    if not scraped_data: # Only scrape if not in cache
+        scraped_data = [] # Default empty
         try:
-            scraped_data = scraper.get_cricbuzz_matches() # Returns list
-            cache.set("scraped_live", scraped_data)
+            # Run scraper in separate thread or just call it? 
+            # It's blocking. We rely on cache.
+            # For now, just call it.
+            scraped_data = scraper.get_cricbuzz_matches()
+            
+            # --- DEMO INJECTION START ---
+            # User requested India vs Pakistan T20 WC Hype Match for text/demo
+            demo_match = {
+                "id": "demo_ind_pak_2026",
+                "name": "India vs Pakistan, T20 World Cup 2026",
+                "status": "Upcoming • Today • 7:00 PM",
+                "score": "High Voltage Clash",
+                "team1": "India",
+                "team2": "Pakistan",
+                "source": "cricbuzz" 
+            }
+            # Check if already exists (unlikely if upcoming)
+            found = False
+            for m in scraped_data:
+                if "India" in m.get("name", "") and "Pakistan" in m.get("name", ""):
+                    found = True
+                    break
+            if not found:
+                scraped_data.insert(0, demo_match) # Top priority
+            # --- DEMO INJECTION END ---
+            
+            cache.set("scraped_live", scraped_data) # Cache the result including demo match
         except Exception as e:
             print(f"Scraper failed: {e}")
             scraped_data = []
