@@ -84,7 +84,27 @@ def get_icc_rankings(category, format_type):
 
         for link in player_links:
             try:
-                name = link.text.strip()
+                # Debug HTML structure
+                # print(f"Link HTML: {link}") 
+                
+                # Attempt to split name and country
+                # Typically country is in a separate span or div if inside anchor?
+                # Or maybe it's just text?
+                
+                # Use get_text with separator to see boundaries
+                full_text = link.get_text("|", strip=True) # "Joe Root|England"
+                parts = full_text.split("|")
+                
+                name = parts[0].strip()
+                country = ""
+                if len(parts) > 1:
+                    country = parts[1].strip()
+                
+                # Fallback if no separator found (just text)
+                if not country and name:
+                     # Check if country is in name? No, risky.
+                     pass
+                
                 if not name: continue
                 
                 # Navigate to Row
