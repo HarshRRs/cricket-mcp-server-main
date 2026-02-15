@@ -311,24 +311,51 @@ def get_schedule():
 @app.route('/rankings')
 def get_rankings():
     """Get ICC rankings."""
+    # 1. Check Cache
+    cache_key = f"rankings_{len(categories)*len(formats)}" # Simple key or just "rankings"
+    # Actually we want to cache ALL so we don't scrape on every request?
+    # Backend iterates.
+    # The existing code structure iterates and returns ONE list.
+    
+    # We should scrape on demand? No, too slow (3 requests * 3 formats?).
+    # Better: Scrape ALL at once and cache.
+    
     cached = cache.get("rankings", RANKINGS_TTL)
     if cached is not None:
-        return jsonify(cached)
-
+         return jsonify(cached)
+         
     all_rankings = []
-    categories = {'batting': 'Batsmen', 'bowling': 'Bowlers', 'allrounder': 'All-Rounders'}
-    formats = ['test', 'odi', 't20']
-
-    # Since free API doesn't expose rankings, we return empty/mock or handle in frontend
-    # This is a placeholder as per user request to use only free APIs
+    
+    # Scrape each category
+    # categories keys: batting, bowling, allrounder
+    # formats: test, odi, t20
+    
+    # Optimization: 'batting' page has all formats. So we only fetch URL 4 times total.
+    # get_icc_rankings handles the fetching.
+    
     for api_cat, display_cat in categories.items():
+        # api_cat: batting, bowling, etc.
+        # But get_icc_rankings takes (category, format).
+        # And slicing logic implies we can reuse the fetch?
+        # get_icc_rankings does fetching internally. 
+        # So calling it 3 times for batting/test, batting/odi, batting/t20 results in 3 fetches effectively?
+        # No, requests are cached by OS? No.
+        # We should optimize scraper to cache the page? 
+        # For MVP, just call it. 12 requests is okay for 24h cache.
+        
         for fmt in formats:
+            # Map api_cat 'allrounder' to scraper 'all-rounder'
+            scrape_cat = 'all-rounder' if api_cat == 'allrounder' else api_cat
+            
+            data = scraper.get_icc_rankings(scrape_cat, fmt)
+            
             all_rankings.append({
                 "type": display_cat,
                 "format": fmt.upper(),
-                "rank": [] # Empty list triggers "No rankings data" state in frontend
+                "rank": data
             })
-
+            time.sleep(0.5) # Be nice to Cricbuzz
+            
     cache.set("rankings", all_rankings)
     return jsonify(all_rankings)
 

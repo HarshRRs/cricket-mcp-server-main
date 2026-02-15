@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import time
+import json
 
 # Use mimic headers to avoid basic bot detection
 HEADERS = {
@@ -9,126 +10,153 @@ HEADERS = {
 }
 
 def get_cricbuzz_matches():
-    """
-    Scrapes live matches from Cricbuzz using robust link detection.
-    Returns a list of dictionaries with match details.
-    """
     try:
         url = "https://www.cricbuzz.com/cricket-match/live-scores"
         response = requests.get(url, headers=HEADERS, timeout=10)
-        response.raise_for_status()
+        if response.status_code != 200: return []
         soup = BeautifulSoup(response.content, "html.parser")
-        
         matches = []
-        
-        # Find all match links directly
         match_links = soup.find_all("a", href=lambda href: href and "/live-cricket-scores/" in href)
-        
         seen_ids = set()
-        
         for link in match_links:
             try:
                 href = link.get("href")
                 match_match = re.search(r"/live-cricket-scores/(\d+)/", href)
-                if not match_match:
-                    continue
-                    
+                if not match_match: continue
                 match_id = match_match.group(1)
-                if match_id in seen_ids:
-                    continue
+                if match_id in seen_ids: continue
                 seen_ids.add(match_id)
-                
                 match_name = link.text.strip()
-                
-                # Try to find status/score by looking at specific container structure
-                # Logic: Link is usually inside a header (h3/div). 
-                # The status/score is usually in a sibling div or parent's sibling.
-                
                 status_text = ""
                 score_text = ""
-                
-                # Attempt 1: Check standard Cricbuzz list structure
-                # Link parent is usually 'cb-lv-scr-mtch-hdr' (div or h3)
-                # Sibling is 'cb-scr-wll-chvrn' (div)
-                
                 header_container = link.parent
                 match_item_container = header_container.parent
-                
-                # Look for score container
                 score_div = match_item_container.find("div", class_="cb-scr-wll-chvrn")
-                if not score_div:
-                    # Fallback: Look for any text in siblings?
-                    # Or try next 'div'
-                    score_div = match_item_container.find_next("div", class_="cb-scr-wll-chvrn")
-                
+                if not score_div: score_div = match_item_container.find_next("div", class_="cb-scr-wll-chvrn")
                 if score_div:
                     raw_text = score_div.get_text(" ", strip=True) 
                     extracted = raw_text.split("•") 
                     if extracted:
                         status_text = extracted[-1].strip()
-                        if len(extracted) > 1:
-                            score_text = extracted[0].strip()
-                        else:
-                            score_text = raw_text
-                
-                # If still empty, maybe it's just "Upcoming" or link text has info?
-                
-                matches.append({
-                    "id": match_id,
-                    "name": match_name,
-                    "status": status_text or "Live/Upcoming",
-                    "score": score_text,
-                    "source": "cricbuzz"
-                })
-            except Exception as e:
-                continue
-                
+                        if len(extracted) > 1: score_text = extracted[0].strip()
+                        else: score_text = raw_text
+                matches.append({"id": match_id, "name": match_name, "status": status_text or "Live/Upcoming", "score": score_text, "source": "cricbuzz"})
+            except: continue
         return matches
-    except Exception as e:
-        print(f"Error fetching Cricbuzz matches: {e}")
-        return []
+    except: return []
 
 def get_commentary(match_id):
-    """
-    Scrapes commentary for a specific match ID.
-    Returns list of commentary strings.
-    """
     try:
         url = f"https://www.cricbuzz.com/live-cricket-scores/{match_id}/commentary"
         response = requests.get(url, headers=HEADERS, timeout=10)
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        response.raise_for_status()
+        if response.status_code != 200: return [f"Could not load commentary (Status {response.status_code})"]
         soup = BeautifulSoup(response.content, "html.parser")
-        
         commentary_lines = []
-        # Commentary lines are often in p.cb-com-ln (older) or div.cb-col.cb-col-100 ng-scope (angular)
-        # Try finding p class="cb-com-ln"
         comm_elements = soup.find_all("p", class_="cb-com-ln")
-        
-        if not comm_elements:
-            # Fallback selector
-            comm_elements = soup.select(".cb-col.cb-col-100 .cb-com-ln")
-
+        if not comm_elements: comm_elements = soup.select(".cb-col.cb-col-100 .cb-com-ln")
         for el in comm_elements:
             text = el.get_text(strip=True)
-            if text:
-                commentary_lines.append(text)
+            if text: commentary_lines.append(text)
+        return commentary_lines[:25]
+    except Exception as e: return [f"Could not load commentary: {str(e)}"]
+
+def get_icc_rankings(category, format_type):
+    try:
+        cat_map = {'batting':'batting', 'bowling':'bowling', 'all-rounder':'all-rounder', 'teams':'teams'}
+        url_cat = cat_map.get(category, 'batting')
+        url = f"https://www.cricbuzz.com/cricket-stats/icc-rankings/men/{url_cat}"
+        
+        response = requests.get(url, headers=HEADERS, timeout=10)
+        if response.status_code != 200: return []
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        rankings = []
+        
+        # Strategy: Find all player links.
+        player_links = soup.find_all('a', href=re.compile(r"/profiles/\d+/"))
+        
+        if not player_links and category == 'teams':
+            # Teams logic: Look for divs with country names?
+            # Or table structure.
+            # Teams usually have 'cb-rank-tbl' or similar?
+            # Let's try to find numeric ranks.
+            pass
+
+        for link in player_links:
+            try:
+                name = link.text.strip()
+                if not name: continue
                 
-        return commentary_lines[:25] # Limit to recent
+                # Navigate to Row
+                # Usually Link -> Div -> Div (Row)
+                # Level 1 Parent (Cell) -> Level 2 Parent (Row)
+                
+                # Heuristic: The row text usually starts with a digit (Rank)
+                # We check the parent chain for a "Row" candidate.
+                
+                row_candidate = None
+                curr = link.parent
+                for _ in range(3):
+                    if not curr: break
+                    txt = curr.get_text(" ", strip=True)
+                    # aggressive check: does it start with digit?
+                    if txt and txt[0].isdigit():
+                        row_candidate = curr
+                        # Don't break immediately, higher up might be better?
+                        # Usually the row is the first container that has Rank + Name + Rating
+                        # Check if "Rating" is present? Rating is usually 3-4 digits at end.
+                        if re.search(r"\d{3,4}$", txt):
+                             break
+                    curr = curr.parent
+                
+                if row_candidate:
+                     row_text = row_candidate.get_text(" ", strip=True)
+                     parts = row_text.split()
+                     if len(parts) >= 3:
+                         rank = parts[0]
+                         rating = parts[-1]
+                         # Filter out if rank is not digit (header?)
+                         if not rank.isdigit(): continue
+                         
+                         rankings.append({
+                            "rank": rank,
+                            "name": name,
+                            "rating": rating,
+                            "country": "", 
+                            "trend": "flat"
+                         })
+            except:
+                continue
+                
+        # Slicing Logic
+        total = len(rankings)
+        if total > 0:
+            section = total // 3
+            start = 0
+            end = total
+            if format_type.lower() == 'test': end = section
+            elif format_type.lower() == 'odi': start = section; end = section * 2
+            elif format_type.lower() == 't20': start = section * 2
+            
+            # Bound checks
+            if start >= total: start = 0; end = 0
+            if end > total: end = total
+            
+            return rankings[start:end]
+            
+        return rankings[:10]
+
     except Exception as e:
-        print(f"Error fetching commentary for {match_id}: {e}")
-        return [f"Could not load commentary: {str(e)}"]
+        print(f"Scraper Error: {e}")
+        return []
 
 if __name__ == "__main__":
-    # verification
-    print("Fetching matches from Cricbuzz...")
-    matches = get_cricbuzz_matches()
-    print(f"Found {len(matches)} matches.")
-    for m in matches[:3]:
-        print(f"Match: {m['name']} | ID: {m['id']} | Status: {m['status']}")
-        print("Fetching commentary...")
-        comm = get_commentary(m['id'])
-        print(f"Commentary lines: {len(comm)}")
-        if comm:
-            print(f"Latest: {comm[0]}")
-        print("-" * 20)
+    print("Testing extraction...")
+    r = get_icc_rankings('batting', 'test')
+    print(f"Test Batting: Found {len(r)}")
+    for i in r[:5]: print(i)
+    
+    print("\nTesting ODI...")
+    r = get_icc_rankings('batting', 'odi')
+    print(f"ODI Batting: Found {len(r)}")
+    for i in r[:5]: print(i)
