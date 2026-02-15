@@ -131,7 +131,7 @@ def get_live():
             
         if 'error' not in data:
             official_data = data.get('data', [])
-            cache.set("live_matches", official_data, ttl_seconds=LIVE_TTL)
+            cache.set("live_matches", official_data)
         else:
             official_data = []
 
@@ -140,7 +140,7 @@ def get_live():
     if not scraped_data:
         try:
             scraped_data = scraper.get_cricbuzz_matches() # Returns list
-            cache.set("scraped_live", scraped_data, ttl_seconds=LIVE_TTL)
+            cache.set("scraped_live", scraped_data)
         except Exception as e:
             print(f"Scraper failed: {e}")
             scraped_data = []
@@ -259,7 +259,7 @@ def get_commentary(match_id):
          
     try:
         data = scraper.get_commentary(match_id)
-        cache.set(cache_key, data, ttl_seconds=60)
+        cache.set(cache_key, data)
         return jsonify({"status": "success", "data": data})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
