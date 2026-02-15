@@ -231,7 +231,16 @@ def get_live():
         # If not duplicate, add as new Premium Match
         # Format score string "120/4 (15.2)" to object?
         # Scraper returns single string score "120/4". We put it in first team?
-        score_obj = [{"title": sm["score"], "r": sm["score"], "w": "", "o": ""}, {"title": "", "r": "", "w": "", "o": ""}]
+        # Use extracted team names
+        t1 = sm.get("team1", "Team 1")
+        t2 = sm.get("team2", "Team 2")
+        
+        # Simple score assignment (put full score string in Team 1 for now, 
+        # as splitting it requires complex parsing of "120/4 & 50/2")
+        score_obj = [
+            {"title": t1, "r": sm["score"], "w": "", "o": ""}, 
+            {"title": t2, "r": "", "w": "", "o": ""}
+        ]
         
         final_list.insert(0, { # Add to top!
             "id": sm["id"],
@@ -240,6 +249,7 @@ def get_live():
             "status": sm["status"],
             "venue": "Cricbuzz Data",
             "date": "Today",
+            "teams": [t1, t2], 
             "score": score_obj,
             "is_premium": True,
             "source": "cricbuzz",

@@ -40,7 +40,32 @@ def get_cricbuzz_matches():
                         status_text = extracted[-1].strip()
                         if len(extracted) > 1: score_text = extracted[0].strip()
                         else: score_text = raw_text
-                matches.append({"id": match_id, "name": match_name, "status": status_text or "Live/Upcoming", "score": score_text, "source": "cricbuzz"})
+                
+                # Parse Teams from Name
+                # Name format: "India vs Pakistan, 1st Test"
+                team1, team2 = "Team 1", "Team 2"
+                try:
+                    # Remove comma suffix (e.g. ", 1st Test")
+                    clean_name = match_name.split(",")[0].strip()
+                    if " vs " in clean_name:
+                        t_parts = clean_name.split(" vs ")
+                        team1 = t_parts[0].strip()
+                        team2 = t_parts[1].strip()
+                    elif " v " in clean_name:
+                        t_parts = clean_name.split(" v ")
+                        team1 = t_parts[0].strip()
+                        team2 = t_parts[1].strip()
+                except: pass
+
+                matches.append({
+                    "id": match_id, 
+                    "name": match_name, 
+                    "status": status_text or "Live/Upcoming", 
+                    "score": score_text, 
+                    "team1": team1,
+                    "team2": team2,
+                    "source": "cricbuzz"
+                })
             except: continue
         return matches
     except: return []
